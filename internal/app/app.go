@@ -14,20 +14,10 @@ type App struct {
 	cfg    *config.Config
 }
 
-func NewApp(logger *zap.Logger) (*App, error) {
-	cfg, err := config.NewConfig()
-	if err != nil {
-		logger.Fatal("Can't load config",
-			zap.Error(err),
-		)
-	}
-	logger.Info("All config download")
-
+func NewApp(cfg *config.Config, logger *zap.Logger) (*App, error) {
 	bot, err := tgbotapi.NewBotAPI(cfg.BotToken)
 	if err != nil {
-		logger.Fatal("Failed to create telegram API bot",
-			zap.Error(err),
-		)
+		return nil, err
 	}
 
 	logger.Info("Bot successfully initialized",
@@ -52,7 +42,11 @@ func (a *App) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			a.logger.Info("shutting down gracefully")
 			return ctx.Err()
-		case update := <-updates:
+		case update, ok := <-updates:
+			if !ok {
+				a.logger.Info("updates channel closed")
+				return nil
+			}
 			a.handleUpdate(update)
 		}
 	}
@@ -68,7 +62,12 @@ func (a *App) handleUpdate(update tgbotapi.Update) {
 		}
 	}()
 
-	if update.Message != nil && update.Message.Text == "/start" {
+	if update.Message == nil {
+		a.logger.Debug("update without message received")
+		return
+	}
+
+	if update.Message.Text == "/start" {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Я жалкое подобие кайтена, что ты можешь сделать:")
 		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
