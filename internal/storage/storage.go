@@ -4,15 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"task-tracker-telegram-bot/internal/model"
 )
 
 var (
-	ErrAlreadyExists = errors.New("storage: entity already exists")
-	ErrNotFound      = errors.New("storage: entity not found")
+	ErrAlreadyExists = errors.New("Сущность уже существует")
+	ErrNotFound      = errors.New("Сущность не найдена")
 )
 
 // Storage описывает базовое хранилище для сущностей T с идентификатором ID.
-type Storage[T Entity[ID], ID comparable] interface {
+type Storage[T model.Entity[ID], ID comparable] interface {
 	Add(entity T) error
 	AddMany(entities []T) error
 	GetByID(id ID) (T, error)
@@ -22,12 +23,12 @@ type Storage[T Entity[ID], ID comparable] interface {
 	GetAll() []T
 }
 
-type InMemoryStorage[T Entity[ID], ID comparable] struct {
+type InMemoryStorage[T model.Entity[ID], ID comparable] struct {
 	mu   sync.RWMutex
 	data map[ID]T
 }
 
-func NewInMemoryStorage[T Entity[ID], ID comparable]() *InMemoryStorage[T, ID] {
+func NewInMemoryStorage[T model.Entity[ID], ID comparable]() *InMemoryStorage[T, ID] {
 	return &InMemoryStorage[T, ID]{
 		data: make(map[ID]T),
 	}
@@ -57,7 +58,7 @@ func (s *InMemoryStorage[T, ID]) AddMany(entities []T) error {
 			return fmt.Errorf("%w: %v", ErrAlreadyExists, id)
 		}
 		if _, exists := seen[id]; exists {
-			return fmt.Errorf("%w: duplicate id in batch %v", ErrAlreadyExists, id)
+			return fmt.Errorf("%w: дубль id в батче %v", ErrAlreadyExists, id)
 		}
 		seen[id] = struct{}{}
 	}
