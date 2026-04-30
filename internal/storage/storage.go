@@ -15,6 +15,7 @@ var (
 type Storage[T Entity[ID], ID comparable] interface {
 	Add(entity T) error
 	AddMany(entities []T) error
+	GetByID(id ID) (T, error)
 	Update(entity T) error
 	DeleteByID(id ID) error
 	DeleteByIDs(ids []ID) error
@@ -65,6 +66,19 @@ func (s *InMemoryStorage[T, ID]) AddMany(entities []T) error {
 		s.data[entity.GetID()] = entity
 	}
 	return nil
+}
+
+func (s *InMemoryStorage[T, ID]) GetByID(id ID) (T, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entity, exists := s.data[id]
+	if !exists {
+		var zero T
+		return zero, fmt.Errorf("%w: %v", ErrNotFound, id)
+	}
+
+	return entity, nil
 }
 
 func (s *InMemoryStorage[T, ID]) Update(entity T) error {
